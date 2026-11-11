@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.benchmarks/
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Build and package artifacts
+dist/
+*.tgz
+*.zip
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

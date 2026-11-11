@@ -1,0 +1,423 @@
+schema: 1
+
+project:
+  name: "{{NAME}}"
+  slug: "{{SLUG}}"
+  version: "0.1.0"
+  gear: standard
+  domains: [hardware, cad, firmware, software, sim]
+  budget_cny: 400
+  license: MIT
+  repo: "https://github.com/your-name/{{SLUG}}"
+  created: "{{DATE}}"
+  blueprint: "{{BLUEPRINT}}"
+
+wish:
+  story: |
+    我住在出租屋，白天上班，晚上回家常常一个人。我想要桌上有个小东西：
+    我叫它一声，它会转头看我；摸它的头有反应；安静的时候别吵我。
+    朋友来家里，它不能显得奇怪，也不能偷偷录我们说话。
+    预算 400 元以内。我不想学编程，但愿意花两个周末动手做。
+  must:
+    - "开机 10 秒内进入待机：屏幕有眼睛，灯环微亮，不闪屏不尖叫"
+    - "叫它名字会转头看过来，并给一个高兴的表情"
+    - "摸头顶和摸下巴的反应不一样"
+    - "连续运行 2 小时不重启、不卡死"
+    - "默认不联网，不偷偷录音"
+    - "整机材料总价不超过 400 元"
+  nice:
+    - "能认出 1.5 米内有人靠近，并主动抬头"
+    - "可以换成自己的声音和说话风格"
+    - "能记住最近三次互动的内容"
+  forbidden:
+    - "不做人脸识别，不存人脸"
+    - "不做强制注册或云端账号"
+    - "不使用锂电池充电（桌面供电版本）"
+  acceptance_hint: "核心体验是「叫它会理你」，不是「像人」。宁可少一个功能，也不要一个时好时坏的功能。"
+
+architecture:
+  summary: |
+    两层结构：ESP32-S3 负责实时动作（表情、转头、灯、麦克风与喇叭的音频进出），
+    主机上的 Python 进程负责慢思考（语音识别、对话、语音合成、人格状态）。
+    两层之间用一条 USB 串口文本协议连接，波特率 921600。
+    这样即使主机没开，机器人也能做出待机、触摸回应等本地反应。
+  features:
+    - id: F1
+      name: "表情与头部动作"
+      how: "GC9A01 圆屏画两只眼睛；两个 MG90S 做左右与俯仰；WS2812 灯环做情绪色。所有动作在固件里限速、限位、超时回中。"
+      components: [servo-pan, servo-tilt, display, led-ring]
+    - id: F2
+      name: "语音进出"
+      how: "INMP441 通过 I2S 采集，MAX98357A 通过另一路 I2S 播放；固件只做音频搬运与音量控制，识别与合成在主机。"
+      components: [mic, amp, speaker]
+    - id: F3
+      name: "在场感知"
+      how: "VL53L0X 每 200 ms 测一次前方距离；小于 800 mm 持续 1 秒判定有人靠近，触发抬头。"
+      components: [tof]
+    - id: F4
+      name: "触摸互动"
+      how: "头顶与下巴各一个 TTP223，固件去抖 30 ms，触摸事件上报主机，同时本地立即给一个轻动作。"
+      components: [touch-head, touch-chin]
+    - id: F5
+      name: "离线人格"
+      how: "主机 robotd 维护精力、亲密度与最近事件；没有大模型时用规则回复，有大模型时通过 Brain 接口替换，人格参数仍由 robotd 控制。"
+      software_only: true
+    - id: F6
+      name: "隐私默认"
+      how: "默认配置 network_enabled=false；麦克风只在唤醒词或触摸后开启 8 秒；采集时灯环常亮。代码里没有任何隐式联网调用。"
+      software_only: true
+
+components:
+  - id: esp32
+    role: controller
+    part: "微雪 ESP32-S3-DEV-KIT-N8R8"
+    qty: 1
+    price_cny: 45.0
+    source: "微雪商城 / 淘宝「微雪电子」"
+    note: "ESP32-S3-WROOM-1-N8R8，8MB Flash + 8MB PSRAM，USB-C 直连，板载 3.3V LDO"
+  - id: mic
+    role: audio
+    part: "INMP441 I2S 数字麦克风模块"
+    qty: 1
+    price_cny: 6.5
+    source: "淘宝「麦克风传感器模块」"
+    note: "3.3V 供电，L/R 接地选左声道"
+    bus: i2s-mic
+  - id: amp
+    role: audio
+    part: "MAX98357A I2S 功放模块"
+    qty: 1
+    price_cny: 7.5
+    source: "淘宝「MAX98357 功放模块」"
+    note: "5V 供电，默认 9dB 增益；喇叭就近接，线不要超过 20 cm"
+    bus: i2s-spk
+  - id: speaker
+    role: audio
+    part: "3W 4Ω 40mm 腔体喇叭"
+    qty: 1
+    price_cny: 9.0
+    source: "淘宝「腔体喇叭 4欧 3W」"
+    note: "一定要带后腔，否则低音全没有"
+  - id: display
+    role: display
+    part: "GC9A01 1.28 寸 240x240 圆屏模块"
+    qty: 1
+    price_cny: 32.0
+    source: "淘宝「GC9A01 圆屏 SPI」"
+    note: "买 4 线 SPI 版本，不要买并口版"
+    bus: spi-disp
+  - id: servo-pan
+    role: actuator
+    part: "MG90S 金属齿轮舵机 180 度"
+    qty: 1
+    price_cny: 9.5
+    source: "淘宝「MG90S 舵机」"
+    note: "左右转头；到位后固件停止输出，避免持续堵转"
+    bus: pwm
+  - id: servo-tilt
+    role: actuator
+    part: "MG90S 金属齿轮舵机 180 度"
+    qty: 1
+    price_cny: 9.5
+    source: "淘宝「MG90S 舵机」"
+    note: "抬头低头；机械限位 -15 到 +35 度"
+    bus: pwm
+  - id: led-ring
+    role: display
+    part: "WS2812B 5 灯环"
+    qty: 1
+    price_cny: 6.5
+    source: "淘宝「WS2812B 灯环 5 位」"
+    note: "固件限亮 40%，避免和功放抢电流"
+  - id: tof
+    role: sensor
+    part: "VL53L0X 激光测距模块"
+    qty: 1
+    price_cny: 11.0
+    source: "淘宝「VL53L0X 测距模块」"
+    note: "I2C 地址 0x29；前面板开 3 mm 小窗，不要贴透明胶"
+    bus: i2c
+    address: "0x29"
+  - id: touch-head
+    role: sensor
+    part: "TTP223 触摸按键模块"
+    qty: 1
+    price_cny: 1.8
+    source: "淘宝「TTP223 触摸模块」"
+    note: "头顶位置；焊盘朝内，引线从颈部走"
+  - id: touch-chin
+    role: sensor
+    part: "TTP223 触摸按键模块"
+    qty: 1
+    price_cny: 1.8
+    source: "淘宝「TTP223 触摸模块」"
+    note: "下巴位置；与头顶用不同触摸阈值"
+  - id: adapter
+    role: power
+    part: "5V 3A USB-C 电源适配器"
+    qty: 1
+    price_cny: 25.0
+    source: "淘宝「5V3A 电源适配器」"
+    note: "必须 3A 起步；不要用手机快充头代替，部分快充头 5V 只给 2A"
+  - id: usb-cable
+    role: cable
+    part: "USB-C 数据线 1m"
+    qty: 1
+    price_cny: 8.0
+    source: "淘宝「USB-C 数据线」"
+    note: "要能传数据，不能只充电"
+  - id: cap
+    role: power
+    part: "1000uF 10V 电解电容 + 100nF 瓷片电容"
+    qty: 1
+    price_cny: 2.5
+    source: "淘宝「电容包」"
+    note: "并联在 5V 舵机电源入口，吸收堵转瞬时压降"
+  - id: wires
+    role: cable
+    part: "杜邦线 20cm 母对母 + 公对母套装"
+    qty: 1
+    price_cny: 5.0
+    source: "淘宝「杜邦线套装」"
+    note: "舵机线如果太细会掉压，用 22AWG 以上"
+  - id: screws
+    role: fastener
+    part: "M2.5x8 与 M3x10 内六角螺丝套装"
+    qty: 1
+    price_cny: 13.0
+    source: "淘宝「螺丝套装」"
+    note: "每种多买 10 颗，打印件攻丝容易滑"
+  - id: filament
+    role: structure
+    part: "PETG 耗材 约 250g"
+    qty: 1
+    price_cny: 22.0
+    source: "淘宝「PETG 1.75mm」"
+    note: "浅色哑光最耐看；PLA 夏天会软，不建议"
+  - id: feet
+    role: other
+    part: "硅胶脚垫 8mm"
+    qty: 1
+    price_cny: 3.0
+    source: "淘宝「硅胶脚垫」"
+    note: "四个，防滑也遮住底部螺丝"
+  - id: spare
+    role: other
+    part: "备件与损耗预留"
+    qty: 1
+    price_cny: 30.0
+    source: "自备"
+    note: "按材料费 15% 预留：烧坏一个模块、打印失败两次都还有余量"
+
+buses:
+  - id: i2s-mic
+    type: i2s
+    controller: esp32
+    pins: {bclk: 4, ws: 5, din: 6}
+    note: "INMP441 只输出，din 是麦克风到主控的数据线"
+  - id: i2s-spk
+    type: i2s
+    controller: esp32
+    pins: {bclk: 7, lrc: 8, dout: 9}
+    note: "MAX98357A 只输入，dout 是主控到功放的数据线"
+  - id: spi-disp
+    type: spi
+    controller: esp32
+    pins: {sck: 12, mosi: 11, cs: 10, dc: 13, rst: 14, bl: 21}
+    note: "bl 是背光，PWM 调光；屏幕不接 MISO"
+  - id: i2c
+    type: i2c
+    controller: esp32
+    pins: {sda: 18, scl: 1}
+    note: "只挂 VL53L0X；总线加 4.7k 上拉，模块自带可不加"
+  - id: pwm
+    type: pwm
+    controller: esp32
+    pins: {pan: 15, tilt: 16}
+    note: "50Hz 舵机信号；两路共用 5V 电源，地必须共地"
+
+pins:
+  - id: led-data
+    function: gpio
+    pin: 17
+    connect: led-ring
+    note: "WS2812 单线数据；固件用 RMT 驱动，串 330 欧电阻"
+  - id: touch-head
+    function: gpio
+    pin: 47
+    connect: touch-head
+    note: "高电平有效，内部下拉；避开启动绑带脚 GPIO3"
+  - id: touch-chin
+    function: gpio
+    pin: 48
+    connect: touch-chin
+    note: "高电平有效，内部下拉"
+
+power:
+  source: "5V/3A USB-C 电源适配器（220V 市电输入）"
+  battery:
+    chemistry: none
+    note: "桌面版本不做电池；要移动版先看 docs/07 的电池章节再改"
+  rails:
+    - id: v5
+      voltage: 5.0
+      max_ma: 3000
+      source: "5V/3A 适配器经 USB-C 接入开发板 5V 引脚"
+    - id: v33
+      voltage: 3.3
+      max_ma: 800
+      source: "ESP32-S3 开发板板载 LDO（5V 转 3.3V）"
+  consumers:
+    - {component: esp32, rail: v33, typical_ma: 120, peak_ma: 500}
+    - {component: display, rail: v33, typical_ma: 40, peak_ma: 60}
+    - {component: mic, rail: v33, typical_ma: 2, peak_ma: 3}
+    - {component: tof, rail: v33, typical_ma: 20, peak_ma: 40}
+    - {component: touch-head, rail: v33, typical_ma: 1, peak_ma: 2}
+    - {component: touch-chin, rail: v33, typical_ma: 1, peak_ma: 2}
+    - {component: servo-pan, rail: v5, typical_ma: 100, peak_ma: 550}
+    - {component: servo-tilt, rail: v5, typical_ma: 100, peak_ma: 550}
+    - {component: amp, rail: v5, typical_ma: 120, peak_ma: 650}
+    - {component: led-ring, rail: v5, typical_ma: 100, peak_ma: 300}
+
+mechanical:
+  mass_kg: 0.55
+  dims:
+    width_mm: 100
+    depth_mm: 90
+    height_mm: 150
+    head_diameter_mm: 86
+    print_tolerance_mm: 0.3
+  limits:
+    pan_deg: [-45, 45]
+    tilt_deg: [-10, 60]
+  parts:
+    - id: enclosure-bottom
+      file: hardware/cad/enclosure.py
+      process: "FDM PETG，0.2mm 层高，3 周壁"
+    - id: enclosure-top
+      file: hardware/cad/enclosure.py
+      process: "FDM PETG，0.2mm 层高，3 周壁"
+  interfaces:
+    - "颈部舵机支架：MG90S 双耳，M2.5 螺丝"
+    - "屏幕：1.28 寸圆屏，四点卡扣，公差 0.3mm"
+    - "底盖：M3x10 四颗，配硅胶脚垫"
+
+behavior:
+  expressions:
+    - {id: idle, name: "待机", eyes: "半闭，缓慢呼吸", led: "#2b3a55", motion: "静止，偶尔轻微歪头"}
+    - {id: happy, name: "高兴", eyes: "弯月眼", led: "#ffb340", motion: "快速左右摆头一次"}
+    - {id: curious, name: "好奇", eyes: "睁大，瞳孔上移", led: "#4cc9f0", motion: "抬头 20 度"}
+    - {id: sleepy, name: "困了", eyes: "几乎闭上", led: "#8d6e63", motion: "缓慢低头"}
+    - {id: alert, name: "注意", eyes: "睁大，瞳孔转向声源", led: "#ff5d5d", motion: "转向声源"}
+  wake_words: ["小豆", "小豆小豆"]
+  idle_timeout_s: 180
+  mic_capture_window_s: 8
+
+requirements:
+  - id: REQ-001
+    text: "无硬件时也能完整演示：模拟串口下「触摸 → 表情 → 回应」闭环，10 秒内跑完"
+    priority: must
+    verify: "python -m pytest software/tests -q"
+    note: "主机软件的模拟串口测试，不依赖任何硬件"
+  - id: REQ-002
+    text: "固件文本协议在原生环境通过单元测试：解析、限位、非法输入拒绝"
+    priority: must
+    verify: "pio test -e native"
+    note: "需要 PlatformIO；没装时该项显示跳过，见 docs/04"
+  - id: REQ-003
+    text: "头部在左右 ±45 度、俯仰 -10 到 +60 度内运动时，不撞外壳（最近间隙 ≥1 mm）"
+    priority: must
+    verify: "python sim/check_reach.py"
+    note: "用尺寸表算包络，不需要实物"
+  - id: REQ-004
+    text: "5V 轨峰值负载不超过电源能力的 90%，3.3V 轨同样；连续运行 2 小时不重启"
+    priority: must
+    verify: "python sim/check_power.py"
+    note: "预算计算可自动验证；2 小时实测需要人工"
+  - id: REQ-005
+    text: "按 docs/02 装配，2 小时内完成，并通过 3 个检查点"
+    priority: must
+    verify: "manual: 按 docs/02 计时装配，每个检查点拍照，记录到 docs/09"
+    note: "首次装配允许 3 小时，熟练后应回到 2 小时"
+  - id: REQ-006
+    text: "头部被按住导致舵机堵转时，5 秒内停止出力，灯环变红提示"
+    priority: must
+    verify: "manual: 上电后用手按住头部 5 秒，观察是否停止并亮红灯；记录到 docs/09"
+    note: "固件有电流与超时双保险；不要用金属工具卡住舵机"
+  - id: REQ-007
+    text: "1.5 米内有人停留 1 秒，机器人主动抬头并给好奇表情"
+    priority: should
+    verify: "manual: 站在 1.5 米处停留，观察是否抬头"
+    note: "强光直射和玻璃反射会干扰 ToF，见 docs/08"
+  - id: REQ-008
+    text: "默认配置下不产生任何网络连接，源码里没有隐式联网调用"
+    priority: must
+    verify: "python -m pytest software/tests/test_privacy.py -q"
+    note: "靠静态扫描与配置断言，不靠抓包"
+  - id: REQ-009
+    text: "语音合成可替换成本地 piper，断网也能说预设短句"
+    priority: nice
+    verify: "manual: 断网运行，确认能播放至少 3 条预设短句"
+    note: "大模型和 TTS 都是可选增强，不是运行前提"
+
+risks:
+  - id: RISK-001
+    text: "舵机堵转烧线圈或烧驱动"
+    sev: 4
+    lik: 3
+    mitigation: "固件限流 + 运动超时停止 + 机械限位；上电先慢速回中自检"
+    verify: "manual: 按 REQ-006 做堵转测试，外壳温升不超过 15K"
+  - id: RISK-002
+    text: "两个舵机同时启动导致 5V 掉压，主控复位"
+    sev: 4
+    lik: 3
+    mitigation: "1000uF 电容 + 3A 适配器 + 固件错峰启动；禁止两轴同时满速"
+    verify: "python sim/check_power.py"
+  - id: RISK-003
+    text: "麦克风和喇叭形成回采啸叫"
+    sev: 3
+    lik: 4
+    mitigation: "麦克风朝上、喇叭朝下，物理隔离；播放时暂停采集；软件侧预留 AEC 接口"
+    verify: "manual: 最大音量播放时观察是否啸叫"
+  - id: RISK-004
+    text: "3D 打印公差导致屏幕压不进或螺丝滑牙"
+    sev: 3
+    lik: 3
+    mitigation: "先打 20mm 公差测试块；屏幕位留 0.3mm 间隙；螺丝柱用热熔铜螺母"
+    verify: "manual: 检查点 2 实测屏幕与螺丝柱"
+  - id: RISK-005
+    text: "隐私争议：用户担心被偷录"
+    sev: 4
+    lik: 2
+    mitigation: "默认不联网；采集时灯环常亮；麦克风窗口 8 秒自动关；文档写清数据去向"
+    verify: "python -m pytest software/tests/test_privacy.py -q"
+  - id: RISK-006
+    text: "舵机方向装反，转头撞限位"
+    sev: 2
+    lik: 4
+    mitigation: "上电自检先小角度试转，方向反了自动反向；装配文档标出轴心方向"
+    verify: "python sim/check_reach.py"
+
+compliance:
+  standards:
+    - "GB 31241-2022（便携式电子产品锂电安全，参考）"
+    - "GB/T 12350-2022（小功率电动机安全，参考）"
+  labels:
+    - "工程原型，非儿童玩具；14 岁以下需成人陪同"
+    - "含锂电池与运动部件：禁止穿刺、短路、夹手"
+  limits: "仅限室内桌面使用；摄像头/麦克风默认不启用；不得用于看护、监控或医疗判断"
+  note: "本表是工程自检清单，不构成认证；对外销售前须按目标市场重新做合规评估"
+
+security:
+  threats:
+    - "麦克风在未唤醒时采集并上传"
+    - "局域网服务被陌生人访问"
+  auth: "本地服务只监听 127.0.0.1；如开放局域网必须配对码 + 会话令牌"
+  ota: "当前无 OTA；升级走 USB；OTA 必须签名并支持回滚"
+  data: "语音仅在本地处理；默认不上传；提供一键清除对话记录"
+
+cost:
+  target_cny: 400
+  shipping_cny: 15
+  currency: CNY
+  note: "材料 ¥249 + 运费 ¥15 + 备件 ¥30 已在清单内；不含 3D 打印机与工具"

@@ -1,0 +1,16 @@
+# Robot Forge bundle layer.
+#
+# 1) The Host plugin registers seven model-facing tools and the /forge command.
+# 2) A dedicated skill provider exposes skills/robot-forge/SKILL.md without
+#    scanning unrelated roots twice. The package path is resolved from the DSH
+#    profile (baseUrl), never guessed from an install prefix.
+- insert:
+    - id: robot-forge
+      name: robot-forge-dsh
+
+    - id: robot-forge-skills
+      name: '@deepseek-ai/dsh-skill-filesystem'
+      config:
+        providerName: robot-forge
+        includeDefaultRoots: false
+        bundledSkillDir: !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('robot-forge-dsh/package.json')), 'skills')

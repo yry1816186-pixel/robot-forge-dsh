@@ -1,0 +1,71 @@
+{
+  "name": "robot-forge-dsh",
+  "version": "2.0.0",
+  "description": "DeepSeek Harness 原生的机器人锻造插件：把一句自然语言愿望变成 12 类形态、买得到、造得出、跑得起来、有证据、可发布的完整机器人项目；七阶段、十二工具、六维盲审与可复现发布包。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "cordis.patch.yml",
+    "locale",
+    "icon.svg",
+    "skills",
+    "docs",
+    "evals",
+    "prompts",
+    "tests",
+    "scripts",
+    ".github",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "SUPPORT.md",
+    "ROADMAP.md"
+  ],
+  "scripts": {
+    "test": "node --test tests/plugin.test.mjs && python -m pytest tests/ -q",
+    "test:host": "node --test tests/plugin.test.mjs",
+    "test:engine": "python -m pytest tests/ -q",
+    "validate": "python skills/robot-forge/scripts/validate_plugin.py",
+    "selftest": "python skills/robot-forge/scripts/forge.py selftest"
+  },
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "robot",
+    "robotics",
+    "hardware",
+    "firmware",
+    "cad",
+    "agent-skill"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yry1816186-pixel/robot-forge-dsh.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yry1816186-pixel/robot-forge-dsh/issues"
+  },
+  "homepage": "https://github.com/yry1816186-pixel/robot-forge-dsh#readme",
+  "author": "BBIGER004 (https://github.com/yry1816186-pixel)",
+  "license": "MIT"
+}

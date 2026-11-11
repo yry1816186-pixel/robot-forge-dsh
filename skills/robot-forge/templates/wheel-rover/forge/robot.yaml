@@ -1,0 +1,437 @@
+schema: 1
+
+project:
+  name: "{{NAME}}"
+  slug: "{{SLUG}}"
+  version: "0.1.0"
+  gear: standard
+  domains: [hardware, firmware, software, sim]
+  budget_cny: 300
+  license: MIT
+  repo: "https://github.com/your-name/{{SLUG}}"
+  created: "{{DATE}}"
+  blueprint: "{{BLUEPRINT}}"
+
+wish:
+  story: |
+    我住在宿舍，想做一个能真的跑起来的小车。用电脑键盘遥控它走，前面有墙会自己停，
+    屏幕上能看到电量和距离。预算 300 元以内，两个周末做完。
+    我不想学嵌入式，但愿意照着接线图插线、照着命令烧程序。
+    它不能一跑就撞墙，也不能把电池充炸。
+  must:
+    - "键盘遥控能前进、后退、左右转，松手就停"
+    - "前方 30 cm 有障碍能自动停车，不靠人反应"
+    - "OLED 上能看到电池电压和前方距离"
+    - "电池供电连续跑 30 分钟以上"
+    - "总材料费不超过 300 元"
+    - "接线反接或轮子卡住时，不会烧主控"
+  nice:
+    - "直线跑偏时能靠 IMU 自动修正"
+    - "低电量时蜂鸣或屏幕提示，而不是突然断电"
+    - "预留一个超声波或循迹传感器的扩展口"
+  forbidden:
+    - "不做室外越野，不承诺爬坡"
+    - "不使用没有保护板的裸 18650 电芯"
+    - "不做 Wi-Fi 遥控（本版本只走 USB 串口）"
+  acceptance_hint: "核心体验是「说走就走、说停就停」。宁可少一个功能，也不要一个会撞墙的遥控车。"
+
+architecture:
+  summary: |
+    小车分三层：ESP32-S3 固件负责电机 PWM、超声测距、IMU 读取和失效保护；
+    主机上的 Python 进程 robotd 负责键盘输入、差速混控、协议收发和状态显示；
+    两者用 USB 串口文本协议连接，波特率 115200。
+    没有主机时，固件仍能执行「30 cm 自动停车」这条本地安全规则。
+  features:
+    - id: F1
+      name: "差速移动"
+      how: "主机把前进速度和转向角速度混算成左右轮目标转速，固件用 TB6612 两路 PWM 驱动 TT 电机；轮速限幅并做斜率限制，避免瞬间满占空比。"
+      components: [chassis, driver]
+    - id: F2
+      name: "超声避障"
+      how: "HC-SR04 每 60 ms 测一次，连续 3 次小于 300 mm 就强制停车；避障判断在固件里做，主机掉线也生效。"
+      components: [sonar]
+    - id: F3
+      name: "IMU 直线修正"
+      how: "MPU6050 读偏航角速度，主机在「只前进」时做闭环修正；没有编码器，所以只修方向不修速度。"
+      components: [imu]
+    - id: F4
+      name: "状态显示"
+      how: "SSD1306 OLED 显示电压、距离、当前模式；I2C 每 200 ms 刷新一次，不阻塞电机控制。"
+      components: [oled]
+    - id: F5
+      name: "串口遥控"
+      how: "主机发送 V/S/PING 文本命令，固件回 T 遥测帧；非法命令回 ERR，不改变当前运动状态。"
+      components: [esp32]
+    - id: F6
+      name: "电源保护"
+      how: "2S 电池经 20A 保护板，再分两路降压：6V 给电机、5V 给主控与传感器；固件监测分压后的电池电压，低于 6.6V 触发降速提示。"
+      components: [battery, bms, buck6, buck5]
+
+components:
+  - id: esp32
+    role: controller
+    part: "微雪 ESP32-S3-DEV-KIT-N8R8"
+    qty: 1
+    price_cny: 45.0
+    source: "微雪商城 / 淘宝「微雪电子」"
+    note: "ESP32-S3-WROOM-1-N8R8，USB-C 直连；本版本只用 GPIO 与 ADC，不用 PSRAM"
+  - id: chassis
+    role: structure
+    part: "2WD 亚克力底盘套件（TT 电机 x2 + 轮子 + 万向轮）"
+    qty: 1
+    price_cny: 45.0
+    source: "淘宝「2WD 亚克力小车底盘」"
+    note: "买带编码器盘的版本也可以，本版本不用编码器；底盘孔位要能放下 65mm 轮"
+    mass_g: 260
+    torque_kgcm: 0.8
+    rated_current_ma: 500
+    stall_current_ma: 2400
+  - id: driver
+    role: actuator
+    part: "TB6612FNG 双路电机驱动模块"
+    qty: 1
+    price_cny: 8.0
+    source: "淘宝「TB6612 电机驱动」"
+    note: "VM 接 6V，VCC 接 3.3V；每路持续 1.2A、峰值 3.2A，带散热片"
+  - id: sonar
+    role: sensor
+    part: "HC-SR04 超声波测距模块"
+    qty: 1
+    price_cny: 5.0
+    source: "淘宝「HC-SR04 超声波」"
+    note: "5V 供电；Echo 是 5V 输出，必须经 1k/2k 分压再到 GPIO"
+  - id: imu
+    role: sensor
+    part: "MPU6050 六轴陀螺仪模块"
+    qty: 1
+    price_cny: 6.0
+    source: "淘宝「MPU6050 模块」"
+    note: "I2C 地址 0x68；只用到 Z 轴角速度，安装时芯片朝上"
+    bus: i2c
+    address: "0x68"
+  - id: oled
+    role: display
+    part: "SSD1306 0.96 寸 128x64 I2C OLED"
+    qty: 1
+    price_cny: 12.0
+    source: "淘宝「0.96 OLED I2C」"
+    note: "I2C 地址 0x3C；买 4 针版本（VCC/GND/SCL/SDA）"
+    bus: i2c
+    address: "0x3C"
+  - id: buck6
+    role: power
+    part: "MP1584EN 降压模块（调到 6.0V）"
+    qty: 1
+    price_cny: 6.0
+    source: "淘宝「MP1584EN 降压模块」"
+    note: "输入 7.4V，输出调到 6.0V 给 TB6612 的 VM；电流标称 3A，实际按 2A 用"
+  - id: buck5
+    role: power
+    part: "5V 3A 降压模块（如 LM2596S 带数显）"
+    qty: 1
+    price_cny: 8.0
+    source: "淘宝「5V 3A 降压模块」"
+    note: "给 ESP32 的 5V 引脚、超声和 OLED 供电；不要用开发板上的 LDO 反供"
+  - id: battery
+    role: power
+    part: "18650 锂电池 2000mAh x2（带保护板成品电池组）"
+    qty: 1
+    price_cny: 36.0
+    source: "淘宝「2S 18650 电池组 7.4V」"
+    note: "必须买带保护板、带 XH2.54 或 XT30 插头的成品组；不要买裸电芯自己焊"
+  - id: holder
+    role: power
+    part: "18650 双节电池盒（带引线）"
+    qty: 1
+    price_cny: 4.0
+    source: "淘宝「18650 电池盒 2 节」"
+    note: "如果买的是成品电池组，这一项可以换成对应的插头转接线"
+  - id: bms
+    role: power
+    part: "2S 20A 锂电池保护板"
+    qty: 1
+    price_cny: 8.0
+    source: "淘宝「2S 20A 保护板」"
+    note: "成品电池组已内置保护板时可不单买；不要省略过放保护"
+  - id: charger
+    role: power
+    part: "2S 7.4V 平衡充电器"
+    qty: 1
+    price_cny: 25.0
+    source: "淘宝「2S 平衡充」"
+    note: "必须能平衡充；充电时人不要离开，电池不要放在易燃物上"
+  - id: switch
+    role: power
+    part: "船型开关 10A"
+    qty: 1
+    price_cny: 2.0
+    source: "淘宝「船型开关」"
+    note: "串在电池正极总回路，装在后板方便断电"
+  - id: wires
+    role: cable
+    part: "杜邦线 20cm 套装 + 22AWG 红黑电源线"
+    qty: 1
+    price_cny: 6.0
+    source: "淘宝「杜邦线套装」"
+    note: "电机线用 22AWG；杜邦线只走信号，不要拿来给电机供电"
+  - id: standoffs
+    role: fastener
+    part: "M3 铜柱与螺丝套装（10mm/15mm）"
+    qty: 1
+    price_cny: 8.0
+    source: "淘宝「M3 铜柱套装」"
+    note: "把主控、驱动和电池盒固定在底盘上"
+  - id: spare
+    role: other
+    part: "备件与损耗预留"
+    qty: 1
+    price_cny: 25.0
+    source: "自备"
+    note: "按材料费 10% 预留：烧一个驱动、断一根线还有余量"
+
+buses:
+  - id: i2c
+    type: i2c
+    controller: esp32
+    pins: {sda: 13, scl: 14}
+    note: "MPU6050 与 OLED 共用；模块自带上拉，总线总电容不要超过 400pF"
+
+pins:
+  - id: motor-left-pwm
+    function: pwm
+    pin: 4
+    connect: driver
+    note: "左轮 PWM，LEDC 20kHz；TB6612 的 PWMA"
+  - id: motor-left-in1
+    function: gpio
+    pin: 5
+    connect: driver
+    note: "左轮方向 AIN1"
+  - id: motor-left-in2
+    function: gpio
+    pin: 6
+    connect: driver
+    note: "左轮方向 AIN2；与 AIN1 不能同时为高"
+  - id: motor-right-pwm
+    function: pwm
+    pin: 7
+    connect: driver
+    note: "右轮 PWM，LEDC 20kHz"
+  - id: motor-right-in1
+    function: gpio
+    pin: 8
+    connect: driver
+    note: "右轮方向 BIN1"
+  - id: motor-right-in2
+    function: gpio
+    pin: 9
+    connect: driver
+    note: "右轮方向 BIN2"
+  - id: motor-stby
+    function: gpio
+    pin: 10
+    connect: driver
+    note: "TB6612 使能；上电默认拉低，初始化完成才拉高"
+  - id: sonar-trig
+    function: gpio
+    pin: 11
+    connect: sonar
+    note: "10us 高脉冲触发"
+  - id: sonar-echo
+    function: gpio
+    pin: 12
+    connect: sonar
+    note: "经 1k/2k 分压到 3.3V；直接接 5V 会打坏 GPIO"
+  - id: battery-sense
+    function: adc
+    pin: 1
+    connect: battery
+    note: "电池正极经 100k/33k 分压后接 ADC1_CH0；满电 8.4V 对应约 2.1V"
+  - id: status-led
+    function: gpio
+    pin: 2
+    connect: esp32
+    note: "板载 LED 或外接 LED，心跳闪烁；故障时常亮"
+
+power:
+  source: "2S 18650 电池组（7.4V 标称），经 6V 与 5V 两级降压"
+  battery:
+    chemistry: "li-ion 2S"
+    mah: 2000
+    cells: 2
+    note: "成品电池组必须带保护板；续航按 85% 可用容量估算，低温会明显缩短"
+  rails:
+    - id: vbat
+      voltage: 7.4
+      max_ma: 5000
+      source: "2S 电池组经 20A 保护板与 10A 开关"
+    - id: v6
+      voltage: 6.0
+      max_ma: 3000
+      source: "MP1584EN 降压，输入 7.4V"
+    - id: v5
+      voltage: 5.0
+      max_ma: 3000
+      source: "5V 3A 降压模块，输入 7.4V"
+  consumers:
+    - {component: chassis, rail: v6, typical_ma: 500, peak_ma: 2400}
+    - {component: esp32, rail: v5, typical_ma: 120, peak_ma: 250}
+    - {component: sonar, rail: v5, typical_ma: 15, peak_ma: 20}
+    - {component: imu, rail: v5, typical_ma: 4, peak_ma: 5}
+    - {component: oled, rail: v5, typical_ma: 20, peak_ma: 30}
+    - {component: driver, rail: v5, typical_ma: 10, peak_ma: 20}
+
+mechanical:
+  mass_kg: 1.05
+  drive_count: 2
+  dims:
+    width_mm: 200
+    depth_mm: 160
+    height_mm: 80
+    wheel_diameter_mm: 65
+    wheel_base_mm: 160
+  limits:
+    max_linear_mps: 0.4
+    max_angular_radps: 1.2
+    stop_distance_mm: 300
+  parts: []
+  interfaces:
+    - "底盘：2WD 亚克力套件，M3 孔位；电机用配套支架固定"
+    - "主控与驱动：M3 铜柱架空 10mm，避免底部焊点短路"
+    - "电池盒：双面胶 + 扎带固定在底盘后部，重心尽量低"
+  tools:
+    - "十字螺丝刀"
+    - "小号一字螺丝刀（调降压模块电位器）"
+    - "万用表（测电压与通断，必须）"
+    - "剥线钳与电工胶带"
+
+motion:
+  wheel_diameter_mm: 65
+  wheel_base_mm: 160
+  max_linear_mps: 0.4
+  max_angular_radps: 1.2
+  stop_distance_mm: 300
+  control_hz: 50
+
+software:
+  host:
+    entry: "software/robotd/main.py"
+    language: python
+    note: "主机端遥操作与安全监督；固件仍保留 30cm 停车兜底"
+
+behavior:
+  modes:
+    - {id: idle, name: "待机", led: "慢闪", oled: "电压 + 距离"}
+    - {id: teleop, name: "遥控", led: "常亮", oled: "速度 + 距离"}
+    - {id: stopped, name: "已停车", led: "快闪", oled: "STOP + 原因"}
+  wake_words: []
+  idle_timeout_s: 300
+
+requirements:
+  - id: REQ-001
+    text: "差速混控正确：给定线速度与角速度，左右轮目标转速符号与比例正确，且不超过最大轮速"
+    priority: must
+    verify: "python -m pytest software/tests -q"
+    note: "主机软件纯函数测试，不需要硬件"
+  - id: REQ-002
+    text: "运动学核算通过：最大线速度、转弯半径和 30 cm 停车距离在底盘能力内"
+    priority: must
+    verify: "python sim/check_kinematics.py"
+    note: "读 robot.yaml 的 motion 参数计算，不依赖实物"
+  - id: REQ-003
+    text: "电源核算通过：6V 与 5V 轨峰值不超过 80%，电池典型续航不少于 1 小时"
+    priority: must
+    verify: "python sim/check_power.py"
+    note: "用元件典型/峰值电流估算；实测见 REQ-005"
+  - id: REQ-004
+    text: "前方 30 cm 有障碍时自动停车，从触发到停稳不超过 0.5 秒"
+    priority: must
+    verify: "manual: 把车架空或抵住，用纸板在 30 cm 处挡一下，观察是否停车；记录到 docs/09"
+    note: "固件本地判断，主机掉线也应生效"
+  - id: REQ-005
+    text: "满电连续遥控 30 分钟以上，电池不鼓包、驱动不烫手"
+    priority: must
+    verify: "manual: 满电跑 30 分钟，每 5 分钟记录电压与温度；记录到 docs/09"
+    note: "室温 25 度；驱动外壳温升超过 40K 要停机检查"
+  - id: REQ-006
+    text: "按 docs/02 装配，2 小时内完成并通过 3 个检查点"
+    priority: must
+    verify: "manual: 按 docs/02 计时装配，每个检查点拍照，记录到 docs/09"
+    note: "第一次允许 3 小时，熟练后应回到 2 小时"
+  - id: REQ-007
+    text: "串口协议健壮：非法命令、超长行、掉线重连都不会让车失控"
+    priority: should
+    verify: "python -m pytest software/tests -q"
+    note: "包含模拟链路的端到端测试"
+  - id: REQ-008
+    text: "固件协议解析在原生环境通过单元测试，非法输入被拒绝"
+    priority: should
+    verify: "pio test -e native"
+    note: "需要 PlatformIO；没装时该项显示跳过，见 docs/04"
+  - id: REQ-009
+    text: "电池低于 6.6V 时降速并提示，低于 6.2V 自动停车"
+    priority: nice
+    verify: "manual: 用可调电源模拟低电压，观察降速与停车"
+    note: "没有可调电源时可用两节快没电的电池，但要有人在旁边"
+
+risks:
+  - id: RISK-001
+    text: "锂电池反接、短路或过放，导致起火或永久损坏"
+    sev: 5
+    lik: 3
+    mitigation: "只买带保护板的成品电池组；插头做防呆标记；总回路串 10A 开关与保险丝；充电必须有人看管"
+    verify: "manual: 上电前用万用表确认极性与电压；记录到 docs/09"
+  - id: RISK-002
+    text: "轮子卡住导致电机堵转，驱动过热或烧毁"
+    sev: 4
+    lik: 3
+    mitigation: "固件检测「PWM 很大但超声距离不变/无前进」持续 2 秒就断电停机；驱动加散热片"
+    verify: "manual: 架空后用手轻捏轮子 2 秒，观察是否停机"
+  - id: RISK-003
+    text: "超声模块 Echo 的 5V 电平直接进 GPIO，打坏主控"
+    sev: 4
+    lik: 3
+    mitigation: "Echo 经 1k/2k 分压；接线表标红；首次上电先测分压点电压"
+    verify: "manual: 万用表测 Echo 分压点，应在 3.3V 以内"
+  - id: RISK-004
+    text: "降压模块输出调错（比如 12V），烧毁主控与传感器"
+    sev: 5
+    lik: 2
+    mitigation: "先空载调压并用万用表确认，再接入负载；电位器打胶固定；上电顺序写进 docs/03"
+    verify: "manual: 空载测 6V 与 5V 输出，误差在 ±0.2V 内"
+  - id: RISK-005
+    text: "电机启动瞬间掉压，主控复位"
+    sev: 3
+    lik: 4
+    mitigation: "电池组 20A 保护板；6V 与 5V 分开降压；电机端并 470uF 电容；固件限制加速度"
+    verify: "python sim/check_power.py"
+  - id: RISK-006
+    text: "遥控端误触或串口被其他程序占用，车突然动"
+    sev: 4
+    lik: 2
+    mitigation: "固件 500 ms 没收到心跳就停车；主机启动时先发 S；串口设备用固定别名"
+    verify: "python -m pytest software/tests -q"
+
+compliance:
+  standards:
+    - "GB 31241-2022（便携式电子产品锂电安全，参考）"
+    - "GB/T 12350-2022（小功率电动机安全，参考）"
+  labels:
+    - "工程原型，非儿童玩具；14 岁以下需成人陪同"
+    - "含锂电池：禁止穿刺、短路、浸水、暴晒"
+  limits: "仅限室内或封闭平整场地；不防水、不载人、不靠近楼梯与明火"
+  note: "本表是工程自检清单，不构成认证；对外销售前须按目标市场重新做合规评估"
+
+security:
+  threats:
+    - "串口被其他程序占用导致误动作"
+    - "电池反接/短路"
+  auth: "USB 串口本地直连，无网络接口；主机启动先发停车命令 S"
+  ota: "无 OTA；固件通过 USB 烧录，烧录前断电挂车"
+  data: "没有摄像头、麦克风与联网模块；不采集、不上传"
+
+cost:
+  target_cny: 300
+  shipping_cny: 12
+  currency: CNY
+  note: "材料 ¥249 + 运费 ¥12 = ¥261；不含电池充电器以外的工具与万用表"

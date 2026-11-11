@@ -1,0 +1,52 @@
+version: 1
+
+commands:
+  - id: software-tests
+    name: "主机软件单元测试"
+    run: "python -m pytest software/tests -q"
+    cwd: "."
+    needs: [python, pytest]
+    required: true
+    timeout: 300
+    req: [REQ-001, REQ-007]
+    note: "无硬件也能跑；覆盖差速混控、协议解析、模拟链路"
+
+  - id: sim-kinematics
+    name: "运动学核算"
+    run: "python sim/check_kinematics.py"
+    cwd: "."
+    needs: [python]
+    required: true
+    timeout: 120
+    req: [REQ-002]
+    note: "读 robot.yaml 的 motion 段，检查轮速、转弯半径与停车距离"
+
+  - id: sim-power
+    name: "电源预算与续航"
+    run: "python sim/check_power.py"
+    cwd: "."
+    needs: [python]
+    required: true
+    timeout: 120
+    req: [REQ-003]
+    note: "峰值不超过电源 80%，成本不超预算，续航不少于 1 小时"
+
+  - id: self-check
+    name: "项目一致性自检"
+    run: "python tools/forge.py check"
+    cwd: "."
+    needs: [python]
+    required: true
+    timeout: 180
+    req: []
+    note: "结构、引脚、电源、文档与生成块是否一致"
+
+  - id: firmware-tests
+    name: "固件协议原生测试"
+    run: "pio test -e native"
+    cwd: "firmware"
+    needs: [pio]
+    required: false
+    timeout: 600
+    req: [REQ-008]
+    note: "需要 PlatformIO；没装时此项跳过，不算失败"

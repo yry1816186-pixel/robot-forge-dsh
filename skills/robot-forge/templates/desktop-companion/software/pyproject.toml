@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robotd"
+version = "0.1.0"
+description = "Host-side brain for the Xiaodou desktop companion"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Xiaodou contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+serial = ["pyserial>=3.5"]
+audio = ["sounddevice>=0.4"]
+test = ["pytest>=8"]
+
+[project.scripts]
+robotd = "robotd.main:main"
+
+[tool.setuptools.packages.find]
+include = ["robotd*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -p no:cacheprovider"

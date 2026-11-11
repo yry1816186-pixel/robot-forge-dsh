@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "note": "All dimensions in millimetres. Change here, then regenerate STL and docs.",
+  "overall": {"width": 100, "depth": 90, "height": 150},
+  "head": {"diameter": 86, "radius": 43, "offset_from_pivot": 30},
+  "body": {"width": 100, "depth": 90, "height": 26, "top_z": 26},
+  "pivot": {"z": 76},
+  "wall": 2.4,
+  "print_tolerance": 0.3,
+  "limits": {"pan": [-45, 45], "tilt": [-10, 60]},
+  "fasteners": {
+    "m3_clearance": 3.4,
+    "m3_self_tap": 2.7,
+    "m3_heat_set": 4.1,
+    "bearing_press": 22.1
+  },
+  "checks": {"min_clearance": 1.0}
+}

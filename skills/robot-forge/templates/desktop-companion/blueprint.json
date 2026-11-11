@@ -1,0 +1,28 @@
+{
+  "name": "桌面陪伴机器人",
+  "slug": "desktop-companion",
+  "one_liner": "会转头、会做表情、能听会说的桌面小伙伴；默认不联网，材料约 ¥264。",
+  "cost_cny": 264,
+  "time": "2 个周末（约 12 小时，含打印）",
+  "difficulty": "入门偏中（需要电烙铁或杜邦线压接，不需要焊贴片）",
+  "domains": [
+    "hardware",
+    "cad",
+    "firmware",
+    "software",
+    "sim"
+  ],
+  "needs": [
+    "3D 打印机",
+    "电烙铁或压线钳",
+    "USB-C 数据线",
+    "电脑（Windows/macOS/Linux）"
+  ],
+  "tags": [
+    "桌面",
+    "陪伴",
+    "语音",
+    "表情",
+    "ESP32-S3"
+  ]
+}

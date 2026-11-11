@@ -1,0 +1,43 @@
+version: 1
+
+# 每条命令都会被执行，结果写进 forge/evidence.jsonl，并刷新 docs/09。
+# required: true 表示这是发布前必须过的门；needs 缺工具时会明确报缺，而不是假装通过。
+commands:
+  - id: software-tests
+    name: "主机软件单测：协议、人格、模拟闭环、隐私"
+    run: "python -m pytest software/tests -q"
+    needs: [pytest]
+    req: [REQ-001, REQ-008]
+    required: true
+    timeout: 300
+  - id: sim-reach
+    name: "运动包络与外壳碰撞检查"
+    run: "python sim/check_reach.py"
+    req: [REQ-003]
+    required: true
+    timeout: 120
+  - id: sim-power
+    name: "电源预算与峰值检查"
+    run: "python sim/check_power.py"
+    req: [REQ-004]
+    required: true
+    timeout: 120
+  - id: self-check
+    name: "交付物结构与一致性自检"
+    run: "python tools/forge.py check"
+    required: true
+    timeout: 180
+  - id: firmware-tests
+    name: "固件协议单测（native，需要 PlatformIO）"
+    run: "pio test -e native"
+    cwd: "firmware"
+    needs: [pio]
+    req: [REQ-002]
+    required: false
+    timeout: 600
+  - id: cad-build
+    name: "生成外壳 STL（需要 build123d）"
+    run: "python hardware/cad/enclosure.py --out hardware/stl"
+    needs: [build123d]
+    required: false
+    timeout: 600

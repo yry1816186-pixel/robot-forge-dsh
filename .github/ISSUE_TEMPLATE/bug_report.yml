@@ -1,0 +1,54 @@
+name: Bug report
+description: 安装失败、工具报错、检查器误报、生成结果异常
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请先搜索已有 issue，并确认不是 `SECURITY.md` 范围的问题（安全漏洞不要公开提交）。
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本
+      placeholder: "2.0.0"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: 操作系统、DSH 版本、Python、Node
+      placeholder: "Windows 11 / DSH 0.2.1 / Python 3.12.10 / Node 24.14.0"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从哪条命令开始，越具体越好
+      placeholder: |
+        1. rf_intake "..." 
+        2. rf_new ...
+        3. rf_check ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 完整错误输出、退出码、相关文件片段（去掉密钥与隐私）
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 已尝试的修复、是否只在特定形态/蓝本出现、能否稳定复现
