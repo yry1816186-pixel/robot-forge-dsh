@@ -158,8 +158,8 @@ Robot Forge 用四件事封堵：**单一事实源 `forge/robot.yaml`**、**可�
 **CLI**：`dsh plugin` 只负责把包装进 profile；还要把 `robot-forge-dsh` 加入 profile `package.json` 的 `dsh.profile.bundles`，否则不会加载 patch。
 
 ```bash
-# 1) 从 GitHub Release 的 tarball 安装（推荐，锁定 v2.0.1）
-dsh plugin --profile desktop add "https://github.com/yry1816186-pixel/robot-forge-dsh/releases/download/v2.0.1/robot-forge-dsh-2.0.1.tgz"
+# 1) 从 GitHub Release 的 tarball 安装（推荐，锁定 v2.0.2）
+dsh plugin --profile desktop add "https://github.com/yry1816186-pixel/robot-forge-dsh/releases/download/v2.0.2/robot-forge-dsh-2.0.2.tgz"
 
 # 或者从本地目录安装
 dsh plugin --profile desktop add "C:/path/to/plugins/robot-forge"

@@ -1,6 +1,6 @@
 {
   "name": "robot-forge-dsh",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "DeepSeek Harness 原生的机器人锻造插件：把一句自然语言愿望变成 12 类形态、买得到、造得出、跑得起来、有证据、可发布的完整机器人项目；七阶段、十二工具、六维盲审与可复现发布包。",
   "type": "module",
   "main": "index.js",
@@ -33,9 +33,9 @@
     "ROADMAP.md"
   ],
   "scripts": {
-    "test": "node --test tests/plugin.test.mjs && python -m pytest tests/ -q",
+    "test": "node --test tests/plugin.test.mjs && python -m pytest tests/ -q -p no:cacheprovider",
     "test:host": "node --test tests/plugin.test.mjs",
-    "test:engine": "python -m pytest tests/ -q",
+    "test:engine": "python -m pytest tests/ -q -p no:cacheprovider",
     "validate": "python skills/robot-forge/scripts/validate_plugin.py",
     "selftest": "python skills/robot-forge/scripts/forge.py selftest"
   },

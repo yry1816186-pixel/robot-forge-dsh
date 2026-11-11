@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.2] - 2026-11-11
+
+CI portability release: 2.0.1 was correct on a UTF-8 developer console, but its first public GitHub Actions run (43011968820) failed all 12 jobs. 2.0.2 removes both environment assumptions that local runs hid.
+
+- `validate.py` now forces UTF-8 on stdout/stderr before printing diagnostics. GitHub's Windows runners use cp1252, where the Chinese status line raised `UnicodeEncodeError` and failed all six Windows jobs before validation could report.
+- CI sets `PYTHONDONTWRITEBYTECODE=1`, `PYTHONIOENCODING=utf-8` and `PYTHONUTF8=1` for every step, and runs pytest with `-p no:cacheprovider`. The previous Ubuntu jobs validated cleanly but then failed Blueprint selftest because pytest's `.pytest_cache` tripped P071.
+- `npm test` / `npm run test:engine` now pass `-p no:cacheprovider`, so the documented local command cannot poison the release tree.
+- No generated-project contract, tool schema, scoring rule, reference, or blueprint changed. 2.0.2 is a drop-in replacement for 2.0.1 and 2.0.0; no migration is required.
+- Verification log: `docs/v2.0.2-release-report.md`.
+
 ## [2.0.1] - 2026-11-11
 
 CI hardening release: clean Linux runners exposed two validator false negatives; both are fixed, and the bundle now validates without PyYAML and without leaving bytecode caches.

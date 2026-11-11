@@ -31,7 +31,7 @@ python scripts/validate_plugin.py
 
 覆盖：
 
-- `package.json` 名称 `robot-forge-dsh`、版本 `2.0.1`、ESM、exports、`dsh.bundle.patch`；
+- `package.json` 名称 `robot-forge-dsh`、版本 `2.0.2`、ESM、exports、`dsh.bundle.patch`；
 - `cordis.patch.yml` 插入 Host 插件与 `@deepseek-ai/dsh-skill-filesystem`，包路径从 profile 解析；
 - Host 文件语法、`export function apply`、`export const inject`、`systemPrompt.section`；
 - **12 个 `rf_*` 工具**齐全；
@@ -141,7 +141,7 @@ python tools/forge.py package
 ## 8. 开源发布物料
 
 - [ ] README 含定位、七阶段、12 工具、12 形态、安装、快速开始、能力矩阵、限制、许可；
-- [ ] CHANGELOG 顶部有 `## [2.0.1]`，且保留 `## [2.0.0]` 的完整迁移说明；
+- [ ] CHANGELOG 顶部有 `## [2.0.2]`，且保留 `## [2.0.1]` 与 `## [2.0.0]` 的完整说明；
 - [ ] LICENSE（MIT）、SECURITY、CODE_OF_CONDUCT、SUPPORT、ROADMAP；
 - [ ] docs/design、docs/CONTRIBUTING、docs/acceptance；
 - [ ] issue/PR 模板可用；

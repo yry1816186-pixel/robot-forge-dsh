@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 PACKAGE_NAME = "robot-forge-dsh"
@@ -46,6 +47,23 @@ class Issue:
 
 def _read(path):
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _force_utf8_stdio():
+    """Keep Chinese diagnostics printable on cp1252/cp936 consoles.
+
+    GitHub's Windows runners expose a cp1252 stdout; printing the Chinese
+    status line raised UnicodeEncodeError before validation could report.
+    Forcing UTF-8 (with replacement) keeps the same bytes locally and in CI.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (LookupError, ValueError):
+            pass
 
 
 def parse_frontmatter(text):
@@ -342,6 +360,7 @@ def validate_plugin(root):
 def main(argv=None):
     import argparse
 
+    _force_utf8_stdio()
     parser = argparse.ArgumentParser(prog="validate_plugin.py", description="校验 DSH robot-forge bundle 的结构")
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[4]))
     parser.add_argument("--json", action="store_true")

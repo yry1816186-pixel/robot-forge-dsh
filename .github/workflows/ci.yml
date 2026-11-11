@@ -18,6 +18,10 @@ jobs:
     name: ${{ matrix.os }} / py${{ matrix.python }} / node${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONIOENCODING: "utf-8"
+      PYTHONUTF8: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -42,16 +46,13 @@ jobs:
         run: python scripts/validate_plugin.py
 
       - name: Python engine tests
-        run: python -m pytest tests/ -q
+        run: python -m pytest tests/ -q -p no:cacheprovider
 
       - name: Host tool tests
         run: node --test tests/plugin.test.mjs
 
       - name: Blueprint selftest
         run: python skills/robot-forge/scripts/forge.py selftest
-        env:
-          PYTHONIOENCODING: utf-8
-          PYTHONUTF8: "1"
 
       - name: Upload failure logs
         if: failure()
