@@ -71,12 +71,24 @@ def parse_frontmatter(text):
 
 
 def _parse_yaml(text):
+    """Parse the patch with PyYAML when present, else the stdlib yamlmini subset.
+
+    The bundle is deliberately stdlib-only at runtime. Validation must not turn
+    an optional PyYAML install into a hard release blocker, especially in clean
+    CI runners; cordis.patch.yml only uses the subset yamlmini already covers.
+    """
+    cleaned = text.replace("!!js ", "")
     try:
         import yaml
     except Exception:  # noqa: BLE001
-        return None, "PyYAML 未安装，跳过 patch 结构解析"
+        try:
+            from . import yamlmini
+
+            return yamlmini.loads(cleaned), ""
+        except Exception as exc:  # noqa: BLE001
+            return None, "没有可用的 YAML 解析器：%s" % exc
     try:
-        return yaml.safe_load(text.replace("!!js ", "")), ""
+        return yaml.safe_load(cleaned), ""
     except Exception as exc:  # noqa: BLE001
         return None, str(exc)
 

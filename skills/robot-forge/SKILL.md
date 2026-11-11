@@ -4,7 +4,7 @@ description: 把一句自然语言机器人愿望变成买得到、造得出、�
 whenToUse: 用户提出机器人/硬件/实物项目，要求选型、BOM、接线、固件、结构、仿真、组装、验收、发布，或判断项目能否发布时。
 metadata:
   license: MIT
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 # Robot Forge v2

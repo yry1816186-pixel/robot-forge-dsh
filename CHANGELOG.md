@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.1] - 2026-11-11
+
+CI hardening release: clean Linux runners exposed two validator false negatives; both are fixed, and the bundle now validates without PyYAML and without leaving bytecode caches.
+
+- P021 no longer fails when PyYAML is absent. `_parse_yaml` still prefers PyYAML, but falls back to the stdlib `yamlmini` subset used at runtime; only a failure of both parsers is an error. This matches the bundle's stdlib-only runtime contract and unblocks clean CI runners.
+- Both `scripts/validate_plugin.py` entrypoints set `sys.dont_write_bytecode = True` before importing `forgekit`, so validation cannot create the `__pycache__` that P071 rejects. Validation is now idempotent and leaves the tree clean.
+- No generated-project contract, tool schema, scoring rule, reference, or blueprint changed. 2.0.1 is a drop-in replacement for 2.0.0; no migration is required.
+- Verification log: `docs/v2.0.1-release-report.md`.
+
 ## [2.0.0] - 2026-11-11
 
 National-release-grade rebuild: from a two-blueprint gate demo to a full-stack robotics delivery system that a non-technical user can drive with one wish.
